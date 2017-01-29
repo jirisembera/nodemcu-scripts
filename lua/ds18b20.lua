@@ -22,7 +22,8 @@ function DS12B20.new(pin)
     self.timer = tmr.create()
     self.pin = pin
     self.callback = nil
-    
+
+    ow.setup(pin)
     local addr
     local count = 0
     repeat
@@ -38,7 +39,7 @@ function DS12B20.new(pin)
     end
     
     -- verify data CRC
-    crc = ow.crc8(string.sub(addr,1,7))
+    local crc = ow.crc8(string.sub(addr,1,7))
     if crc ~= addr:byte(8) then
         print("CRC is not valid!")
         return nil
@@ -48,7 +49,7 @@ function DS12B20.new(pin)
     if (addr:byte(1) ~= 0x10) and (addr:byte(1) ~= 0x28) then
         print("Device family is not recognized.")
         return nil
-    end    
+    end
 
     self.addr = addr
     return self
@@ -61,17 +62,17 @@ function DS12B20:_readout(callback, as_string)
     end
     
     if ow.reset(self.pin) == 0 then
-        print("DS12B20: Device not present, cannot readout data.")
+        print("DS12B20: Device not present, cannot read data.")
         return
     end
     
     ow.select(self.pin, self.addr)
-    ow.write(pin,0xBE,1) -- Command to read Scratchpad
+    ow.write(self.pin,0xBE,1) -- Command to read Scratchpad
 
     -- receive scratchpad data
-    local data = string.char(ow.read(pin))
+    local data = string.char(ow.read(self.pin))
     for i = 1, 8 do
-        data = data .. string.char(ow.read(pin))
+        data = data .. string.char(ow.read(self.pin))
     end
 
     -- verify CRC
@@ -82,9 +83,9 @@ function DS12B20:_readout(callback, as_string)
     end
 
     -- convert to degrees
-    t = (data:byte(1) + data:byte(2) * 256) * 625
-    t1 = t / 10000 -- temperature in degrees
-    t2 = t % 10000 -- decimal part (useful for integer builds)
+    local t = (data:byte(1) + data:byte(2) * 256) * 625
+    local t1 = t / 10000 -- temperature in degrees
+    local t2 = t % 10000 -- decimal part (useful for integer builds)
 
     -- call calback
     callback(t1, t2)
@@ -98,8 +99,8 @@ end
 function DS12B20:read_value(callback)
     -- issue Convert T command
     if ow.reset(self.pin) == 0 then
-        print("DS12B20: Device not present, cannot readout data.")
-        return
+        print("DS12B20: Device not present, cannot read data.")
+        return false
     end
     
     ow.select(self.pin, self.addr)
