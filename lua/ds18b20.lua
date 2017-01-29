@@ -56,7 +56,7 @@ function DS12B20.new(pin)
 end
 
 -- Reads out data from scratchpad. Don't call directly, use read_value method instead.
-function DS12B20:_readout(callback, as_string)
+function DS12B20:_readout(callback)
     if not callback then
         return
     end
