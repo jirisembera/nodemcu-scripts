@@ -1,27 +1,26 @@
--- Library for reading temperature from DS12B20 sensor
+-- Library for reading temperature from DS18B20 sensor
 -- Sample usage:
--- > sensor = DS12B20(5)       -- init sensor on pin 5
+-- > sensor = DS18B20(5)       -- init sensor on pin 5
 -- > sensor:read_value(print)  -- read temperature and print it to console
 -- 
 -- required modules: ow, tmr
 -- TODO: Support for other sensor commands (Precision configuration, ROM access, etc.)
 
-DS12B20 = {}
-DS12B20.__index = DS12B20
+DS18B20 = {}
+DS18B20.__index = DS18B20
 
 -- allow construction via directly calling the meta-table
-setmetatable(DS12B20, {
+setmetatable(DS18B20, {
   __call = function (cls, ...)
     return cls.new(...)
   end,
 })
 
 -- actual constructor
-function DS12B20.new(pin)
-    local self = setmetatable({}, DS12B20)
+function DS18B20.new(pin)
+    local self = setmetatable({}, DS18B20)
     self.timer = tmr.create()
     self.pin = pin
-    self.callback = nil
 
     ow.setup(pin)
     local addr
@@ -56,13 +55,13 @@ function DS12B20.new(pin)
 end
 
 -- Reads out data from scratchpad. Don't call directly, use read_value method instead.
-function DS12B20:_readout(callback)
+function DS18B20:_readout(callback)
     if not callback then
         return
     end
     
     if ow.reset(self.pin) == 0 then
-        print("DS12B20: Device not present, cannot read data.")
+        print("DS18B20: Device not present, cannot read data.")
         return
     end
     
@@ -78,7 +77,7 @@ function DS12B20:_readout(callback)
     -- verify CRC
     crc = ow.crc8(string.sub(data,1,8))    
     if crc ~= data:byte(9) then
-        print("DS12B20: CRC mismatch on readout.")
+        print("DS18B20: CRC mismatch on readout.")
         return
     end
 
@@ -96,10 +95,10 @@ end
 -- 
 -- @param callback Function to call when readout is finished. The callback receives 2 values:
 --        measured value in °C and decimal part of the temperature (useful for non-float builds).
-function DS12B20:read_value(callback)
+function DS18B20:read_value(callback)
     -- issue Convert T command
     if ow.reset(self.pin) == 0 then
-        print("DS12B20: Device not present, cannot read data.")
+        print("DS18B20: Device not present, cannot read data.")
         return false
     end
     
