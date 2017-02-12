@@ -10,12 +10,18 @@
 local LISTEN_PORT = 65432
 local CONNECTION_TIMEOUT = 1200 -- 20min
 local AUTH_MAGIC = "<secret>" -- have to send 
+local PROMPT = "\r\n> "
 
 -- LOCALS
 local authorized = {}
 
 -- event handlers
 function send_output(str)
+    -- fix newline - replace \n with \r\n
+    if str == "\n" then
+        str = "\r\n"
+    end
+    
     for sock, enabled in pairs(authorized) do
         if enabled then
             sock:send(str)
@@ -29,18 +35,19 @@ function on_receive(sck, data)
         if data:sub(1, AUTH_MAGIC:len()) == AUTH_MAGIC then
             authorized[sck] = 1
             node.output(send_output, false) -- write result to both socket and serial
-            sck:send("Welcome!\r\n> ")
+            sck:send("Welcome!" .. PROMPT)
         end
         return
     end
 
     -- process command
     local success, error = pcall(loadstring(data))--pcall(node.input, data)
+    
     if not success then
         sck:send(error)
     end
     
-    sck:send("\r\n> ")
+    sck:send(PROMPT)
 end
 
 function on_close(sck)
