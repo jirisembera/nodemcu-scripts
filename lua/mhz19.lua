@@ -16,13 +16,14 @@ MHZ19.__index = MHZ19
 setmetatable(MHZ19, {
   __call = function (cls, ...)
     return cls.new(...)
-  end,
+  end
 })
 
 -- actual constructor
 function MHZ19.new()
     local self = setmetatable({}, MHZ19)
     self._last_value = 0
+    self._tmr = tmr.create()
 
     uart.setup(0, 9600, 8, uart.PARITY_NONE, uart.STOPBITS_1, 0)
         
@@ -30,19 +31,27 @@ function MHZ19.new()
 end
 
 function MHZ19:read_value(callback)
-    uart.on("data", 9, function(data) 
+    if not callback then
+        return 0
+    end
+    uart.on("data", 9, function(data)
         if string.byte(data, 1) == 0xFF and
             string.byte(data, 2) == 0x86 then
                 local high_level_conc = string.byte(data, 3)
                 local low_level_conc = string.byte(data, 4)
                 self._last_value = high_level_conc * 256 + low_level_conc
                 if callback then
+                    uart.alt(0)
                     callback( self._last_value )
                 end
             end
     end, 0)
 
+    uart.alt(1) -- switch UART to alternative pins
     uart.write(0, 0xFF, 0x01, 0x86,0x00,0x00,0x00,0x00,0x00, 0x79)
+    tmr.alarm(self._tmr, 1000, tmr.ALARM_SINGLE, function(tmr)
+        uart.alt(0) -- restore UART setup after at most 1s
+    end)
 
     return self._last_value
 end
