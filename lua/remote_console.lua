@@ -16,7 +16,7 @@ local PROMPT = "\r\n> "
 local authorized = {}
 
 -- event handlers
-function send_output(str)
+local function send_output(str)
     -- fix newline - replace \n with \r\n
     if str == "\n" then
         str = "\r\n"
@@ -29,7 +29,7 @@ function send_output(str)
     end
 end
 
-function on_receive(sck, data)
+local function on_receive(sck, data)
     -- auth check
     if authorized[sck] == nil then
         if data:sub(1, AUTH_MAGIC:len()) == AUTH_MAGIC then
@@ -50,19 +50,22 @@ function on_receive(sck, data)
     sck:send(PROMPT)
 end
 
-function on_close(sck)
+local function on_close(sck)
     authorized[sck] = nil
-    print("disconnected")
 end
 
-pcall( function() remote_console:close() end ) -- try to close previous server instance
+local function on_client_connected( conn )
+    buff_conn = BufferedSocket(conn)
+    
+    buff_conn:on("receive", on_receive)
+    buff_conn:on("disconnection", on_close)
+end
+
+if remote_console then
+    pcall( remote_console.close, remote_console ) -- try to close previous server instance
+end
 remote_console = net.createServer(net.TCP, CONNECTION_TIMEOUT)
 
 if remote_console then
-    remote_console:listen(LISTEN_PORT, function(conn)
-        buff_conn = BufferedSocket(conn)
-        
-        buff_conn:on("receive", on_receive)
-        buff_conn:on("disconnection", on_close)
-    end)
+    remote_console:listen(LISTEN_PORT, on_client_connected)
 end

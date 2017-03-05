@@ -14,6 +14,14 @@ setmetatable(BufferedSocket, {
 
 local socket_cache = {} -- BufferedSocket cache
 
+-- disconnect callback
+local function _on_disconnect( sck, error_code )
+    socket_cache[sck] = nil
+    if self._disconnection_callback then
+        self._disconnection_callback(self, error_code)
+    end
+end
+
 -- actual constructor
 function BufferedSocket.new(socket)
     if socket_cache[socket] ~= nil then
@@ -28,12 +36,7 @@ function BufferedSocket.new(socket)
     self._all_sent_callback = nil -- callback fired when self._queue is empty
     self._disconnection_callback = nil -- on disconnect callback
 
-    socket:on("disconnection", function( sck, error_code )
-        socket_cache[sck] = nil
-        if self._disconnection_callback then
-            self._disconnection_callback(self, error_code)
-        end
-    end)
+    socket:on("disconnection", _on_disconnect)
 
     socket_cache[socket] = self -- store in cache
     return self
