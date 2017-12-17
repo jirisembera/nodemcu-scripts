@@ -16,9 +16,11 @@ local socket_cache = {} -- BufferedSocket cache
 
 -- disconnect callback
 local function _on_disconnect( sck, error_code )
+    local buffsocket = socket_cache[sck]
     socket_cache[sck] = nil
-    if self._disconnection_callback then
-        self._disconnection_callback(self, error_code)
+    
+    if buffsocket._disconnection_callback then
+        buffsocket._disconnection_callback(buffsocket, error_code)
     end
 end
 
