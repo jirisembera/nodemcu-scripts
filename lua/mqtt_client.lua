@@ -113,11 +113,11 @@ function mqtt_setup(host, port, clientid, username, password, on_ready)
 end
 
 function mqtt_subscribe( topic, qos, callback )
+    _callbacks[topic] = callback
     if _connected then
         client:subscribe( topic, qos )
     else
         _subscriptions[topic] = qos
-        _callbacks[topic] = callback
         _has_subscriptions = true
     end
 end
