@@ -1,6 +1,9 @@
 -- MQTT client
+--
+-- To override the default MQTT keepalive interval, set MQTT_KEEPALIVE_INTERVAL global variable
 -- 
 -- required modules: mqtt, wifi_init
+local _mqtt_keepalive_interval = MQTT_KEEPALIVE_INTERVAL or 45 -- s, interval for keepalive packets
 
 local client = nil
 local keepalive_topic = "/status/default"
@@ -12,7 +15,7 @@ local _host = nil
 local _port = nil
 local _timer = tmr.create()   -- keepalive / reconnect timer
 local _reconnect_delay = 5000
-local _keepalive_delay = 60000
+local _keepalive_delay = 60000 -- ms, interval for publishing to keepalive topic
 local _has_subscriptions = false -- if there is something in _subscriptions table. client:subscribe throws an error if it's empty
 local _subscriptions = {}
 local _callbacks = {}
@@ -74,7 +77,7 @@ local function _connect_succeeded( client )
     end
 end
 
-function mqtt_setup(host, port, clientid, username, password, on_ready)
+function mqtt_setup(host, port, clientid, username, password, on_ready, lwt_topic, lwt_payload)
     if client then
         verbose_print("mqtt error: Already created")
         return
@@ -88,8 +91,15 @@ function mqtt_setup(host, port, clientid, username, password, on_ready)
     end
     verbose_print("MQTT: Keepalive topic: ", keepalive_topic)
 
-    client = mqtt.Client(clientid, 45, username, password)
-    client:lwt(keepalive_topic, "offline", 0, 1) -- qos=0, retain=true
+    if not lwt_topic then
+        lwt_topic = keepalive_topic
+    end
+    if not lwt_payload then
+        lwt_payload = "offline"
+    end
+
+    client = mqtt.Client(clientid, _mqtt_keepalive_interval, username, password)
+    client:lwt(lwt_topic, lwt_payload, 0, 1) -- qos=0, retain=true
     client:on("message", function( client, topic, data ) 
         verbose_print("MQTT: Dispatching topic: ", topic, " message: ", data )
         if _callbacks[topic] then
