@@ -136,11 +136,11 @@ function mqtt_onready_register( callback )
     _on_ready = callback
 end
 
-function mqtt_publish(topic, payload, qos, retain)
+function mqtt_publish(topic, payload, qos, retain, callback)
     if not _connected then
         return false
     end
-    return client:publish(topic, payload, qos, retain)
+    return client:publish(topic, payload, qos, retain, callback)
 end
 
 function mqtt_close()
