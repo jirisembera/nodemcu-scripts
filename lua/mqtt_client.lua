@@ -30,12 +30,12 @@ local function verbose_print(...)
     end
 end
 
-local function _do_connect(host, port, secure, autoreconnect, on_success, on_error)
-    tmr.alarm(_timer, _connect_timeout, tmr.ALARM_SINGLE, function(timer)
+local function _do_connect(host, port, secure, on_success, on_error)
+    _timer:alarm(_connect_timeout, tmr.ALARM_SINGLE, function(timer)
         verbose_print("MQTT: Watchdog timeout!")
         node.restart()
     end)
-    client:connect( host, port , secure, autoreconnect, on_success, on_error )
+    client:connect( host, port , secure, on_success, on_error )
 end
 
 local function _connect_failed( client, error )
@@ -46,7 +46,7 @@ local function _connect_failed( client, error )
         node.restart()
     end
     
-    tmr.alarm(_timer, _reconnect_delay, tmr.ALARM_SINGLE, function()
+    _timer:alarm(_reconnect_delay, tmr.ALARM_SINGLE, function()
         verbose_print("MQTT: Reconnecting...")
         _do_connect( host, port , 0, 0, _connect_succeeded, _connect_failed)
     end )
@@ -54,7 +54,7 @@ end
 
 local function _connect_succeeded( client )
     local ip = wifi.sta.getip()
-    tmr.alarm(_timer, _keepalive_delay, tmr.ALARM_AUTO, function()
+    _timer:alarm(_keepalive_delay, tmr.ALARM_AUTO, function()
         if not mqtt_publish(keepalive_topic, ip, 0, 0) then
             node.restart()
         end
@@ -113,11 +113,11 @@ function mqtt_setup(host, port, clientid, username, password, on_ready, lwt_topi
     
     if wifi.sta.getip() then
         verbose_print("MQTT: wifi already connected, starting mqtt")
-        _do_connect( host, port , 0, 0, _connect_succeeded, _connect_failed )
+        _do_connect( host, port , false, _connect_succeeded, _connect_failed )
     else
         wifi_connected_register(function(T)
             verbose_print("MQTT: wifi connected, starting mqtt")
-            _do_connect( host, port , 0, 0, _connect_succeeded, _connect_failed )
+            _do_connect( host, port , false, _connect_succeeded, _connect_failed )
         end)
     end
 end
@@ -127,7 +127,7 @@ function mqtt_subscribe( topic, qos, callback )
     if _connected then
         client:subscribe( topic, qos )
     else
-        _subscriptions[topic] = qos
+        _subscriptions[topic] = qos or 0
         _has_subscriptions = true
     end
 end
@@ -144,7 +144,7 @@ function mqtt_publish(topic, payload, qos, retain, callback)
 end
 
 function mqtt_close()
-    tmr.stop(_timer)
+    tmr_timer:stop(_timer)
     client:close()
     client = nil
 end
