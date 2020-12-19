@@ -14,6 +14,8 @@
 --   * serving text responses or files
 --
 
+-- TODO: handler should return status code
+
 --
 -- Config
 --
@@ -156,9 +158,10 @@ function Request.new(socket)
                 return
             end
             print("handle_request failed", response)
-        end
-
-        write_status_and_close(socket, 500, "Internal Server Error", "Request handler not defined or failed")
+            write_status_and_close(socket, 500, "Internal Server Error", "Request failed: " .. response)
+        else
+            write_status_and_close(socket, 500, "Internal Server Error", "Request handler not defined")
+        end 
     end
 
     local function store_to_buffer(socket, data)
