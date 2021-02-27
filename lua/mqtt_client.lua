@@ -144,9 +144,8 @@ function mqtt_publish(topic, payload, qos, retain, callback)
 end
 
 function mqtt_close()
-    tmr_timer:stop(_timer)
+    _timer:stop()
     client:close()
     client = nil
 end
-
 
